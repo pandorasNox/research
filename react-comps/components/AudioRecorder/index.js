@@ -12,9 +12,11 @@ class AudioRecorder extends Component {
     state = {
         isGetUsermediaSupported: false,
         isRecording: false,
-        chunks: [],
+        // chunks: [],
         clips: [],
     };
+
+    chunks = [];
 
     constructor(props) {
         super(props);
@@ -43,33 +45,38 @@ class AudioRecorder extends Component {
         // Success callback
         .then(function(stream) {
             const mediaRecorder = new MediaRecorder(stream);
+            let {chunks} = that;
 
             mediaRecorder.ondataavailable = function(e) {
-                const {chunks} = that.state;
-                console.log('onRecord ... ondataavailable');
+                // const {chunks} = that.state;
+                // console.log('onRecord ... ondataavailable');
+                // const newChunks = chunks.slice(0);
+                // newChunks.push(e.data);
+                // that.setState({chunks:newChunks});
                 const newChunks = chunks.slice(0);
                 newChunks.push(e.data);
-                that.setState({chunks:newChunks});
+                chunks = newChunks;
             }
 
             mediaRecorder.onstop = function(e) {
                 let runs = 0;
-                const intervall = setInterval(() => {
-                    const {chunks, clips} = that.state;
-                    console.log('mediaRecorder.onstop', chunks);
-                    if (chunks.length === 0 || runs === 10) {
-                        runs++;
-                        return;
-                    }
+                // const intervall = setInterval(() => {
+                    const {/*chunks,*/ clips} = that.state;
+                    // console.log('mediaRecorder.onstop', chunks);
+                    // if (chunks.length === 0 || runs === 10) {
+                    //     runs++;
+                    //     return;
+                    // }
 
-                    clearInterval(intervall);
+                    // clearInterval(intervall);
 
                     const clipName = prompt('Enter a name for your sound clip');
-    
+
                     const blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-                    that.setState({chunks: []});
+                    // that.setState({chunks: []});
+                    chunks = [];
                     const audioURL = window.URL.createObjectURL(blob);
-        
+
                     const clip = {
                         name: clipName,
                         blob: blob,
@@ -78,9 +85,9 @@ class AudioRecorder extends Component {
 
                     const newClips = clips.slice(0);
                     newClips.push(clip);
-        
+
                     that.setState({clips: newClips})
-                }, 10);
+                // }, 10);
             }
 
             that.state.mediaRecorder = mediaRecorder;
@@ -112,15 +119,24 @@ class AudioRecorder extends Component {
         that.setState({isRecording: false});
     };
 
+    onDelete = (indexToDelete) => {
+        const {clips} = this.state;
+
+        const newClips = clips.slice(0);
+        newClips.splice(indexToDelete, 1);
+
+        this.setState({clips: newClips});
+    };
+
     // deleteButton.onclick = function(e) {
     //     var evtTgt = e.target;
     //     evtTgt.parentNode.parentNode.removeChild(evtTgt.parentNode);
     // }
     
     render() {
-        const {clips} = this.state;
+        const {clips, isRecording} = this.state;
         const {className} = this.props;
-        const {onRecord, onStop} = this;
+        const {onRecord, onStop, onDelete} = this;
         return (
             <div className={className} style={{"border": "1px solid black"}} >
                 <section className="visuals">
@@ -128,25 +144,29 @@ class AudioRecorder extends Component {
                 </section>
                 <section className="main-controls">
                     <div id="buttons">
-                    <button className="record" onClick={onRecord} >Record</button>
+                    <button className="record" onClick={onRecord}
+                        style={{backgroundColor: isRecording ? 'red': 'initial'}}
+                    >
+                        Record
+                    </button>
                     <button className="stop" disabled="" onClick={onStop}>Stop</button>
                     </div>
                 </section>
-                <AudioPlayer {...{clips}} />
+                <AudioPlayer {...{clips, onDelete}} />
             </div>
         )
     }
 };
 
-const AudioPlayer = ({clips}) => {
+const AudioPlayer = ({clips, onDelete}) => {
     return (
         <section className="clips">
-            {clips.map((clip) => {
+            {clips.map((clip, index) => {
                 return (
                     <article key={clip.name} style={{"border": "1px solid black"}} className="clip">
                         <audio src={clip.audioURL} controls></audio>
                         <p>{clip.name}</p>
-                        <button>Delete</button>
+                        <button onClick={() => {onDelete(index)}} >Delete</button>
                     </article>
                 );
             })}
